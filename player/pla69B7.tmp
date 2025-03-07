@@ -1470,9 +1470,8 @@ one_way_collision_margin = 0.0
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 position = Vector2(-15, 55)
 sprite_frames = SubResource("SpriteFrames_63t4g")
-animation = &"run"
+animation = &"wall_jump"
 autoplay = "idle"
-frame_progress = 0.499582
 
 [connection signal="animation_changed" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_changed"]
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]
