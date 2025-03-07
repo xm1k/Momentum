@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c7xwrdfy0hafy"
-path="res://.godot/imported/Tileset.svg-3b82f671acd2391567f95cf5c5ee500e.ctex"
+uid="uid://csoffyuhn82m1"
+path="res://.godot/imported/Rabbot_Wall_Jump.png-23ec798bb3d1919b2f4d13d479cc7873.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Tileset.svg"
-dest_files=["res://.godot/imported/Tileset.svg-3b82f671acd2391567f95cf5c5ee500e.ctex"]
+source_file="res://Animations_Rabbot/Rabbot_Wall_Jump.png"
+dest_files=["res://.godot/imported/Rabbot_Wall_Jump.png-23ec798bb3d1919b2f4d13d479cc7873.ctex"]
 
 [params]
 
@@ -32,6 +32,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false

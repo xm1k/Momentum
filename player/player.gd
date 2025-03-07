@@ -79,7 +79,7 @@ func check_collisions():
 				wall_side = 1
 				rotation = deg_to_rad(-90 * wall_side)
 				if(save_speed):
-					speed+=200
+					speed+=300
 	elif test_move(transform, Vector2(-1,0)):
 		var left_tile_pos = tile_pos + Vector2i(-2,0)
 		var left_tile_data = tilemap.get_cell_tile_data(0, left_tile_pos)
@@ -100,7 +100,7 @@ func check_collisions():
 				wall_side = -1
 				rotation = deg_to_rad(-90 * wall_side)
 				if(save_speed):
-					speed+=200
+					speed-=300
 				save_speed = false
 	else:
 		wall_side = 0

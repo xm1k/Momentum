@@ -1,7 +1,7 @@
 extends Camera2D
 
 @export var target: Node2D  # Ссылка на игрока
-@export var smooth_speed: float = 0.1  # Коэффициент плавности (0.01 - медленно, 1 - мгновенно)
+@export var smooth_speed: float = 0.05  # Коэффициент плавности (0.01 - медленно, 1 - мгновенно)
 
 
 func _process(delta):

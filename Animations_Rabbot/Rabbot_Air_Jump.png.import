@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://boc4wfhc37vkd"
-path="res://.godot/imported/Tileset-64.svg-944e42645f4894b15e9010c9b2d4e422.ctex"
+uid="uid://gdnrfhxnmvv6"
+path="res://.godot/imported/Rabbot_Air_Jump.png-09673fb9af9fbf4992ac011f6080ab79.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Tileset-64.svg"
-dest_files=["res://.godot/imported/Tileset-64.svg-944e42645f4894b15e9010c9b2d4e422.ctex"]
+source_file="res://Animations_Rabbot/Rabbot_Air_Jump.png"
+dest_files=["res://.godot/imported/Rabbot_Air_Jump.png-09673fb9af9fbf4992ac011f6080ab79.ctex"]
 
 [params]
 
@@ -32,6 +32,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false
