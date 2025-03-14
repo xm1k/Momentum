@@ -1,0 +1,33 @@
+[remap]
+
+importer="font_data_dynamic"
+type="FontFile"
+uid="uid://db3wplxlowjwg"
+path="res://.godot/imported/SF Square Head.ttf-19273129baad8fe33aad7633308d73ab.fontdata"
+
+[deps]
+
+source_file="res://SF Square Head.ttf"
+dest_files=["res://.godot/imported/SF Square Head.ttf-19273129baad8fe33aad7633308d73ab.fontdata"]
+
+[params]
+
+Rendering=null
+antialiasing=1
+generate_mipmaps=false
+multichannel_signed_distance_field=false
+msdf_pixel_range=8
+msdf_size=48
+allow_system_fallback=true
+force_autohinter=false
+hinting=1
+subpixel_positioning=1
+oversampling=0.0
+Fallbacks=null
+fallbacks=[]
+Compress=null
+compress=true
+preload=[]
+language_support={}
+script_support={}
+opentype_features={}

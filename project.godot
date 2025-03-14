@@ -11,9 +11,24 @@ config_version=5
 [application]
 
 config/name="Momentum"
-run/main_scene="res://main.tscn"
+run/main_scene="res://map.tscn"
 config/features=PackedStringArray("4.2", "GL Compatibility")
+boot_splash/show_image=false
 config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/mode=3
+window/size/borderless=true
+window/stretch/mode="viewport"
+
+[importer_defaults]
+
+animation_library={
+"animation/trimming": true
+}
 
 [input]
 
@@ -60,5 +75,6 @@ dash={
 
 [rendering]
 
+gl_compatibility/nvidia_disable_threaded_optimization=false
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"

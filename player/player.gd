@@ -2,11 +2,13 @@ extends CharacterBody2D
 
 
 @export var speed_label: Label
-@export var stamina: ProgressBar
+@export var stamina: TextureProgressBar
+
+@export var audio_players: Array[AudioStreamPlayer] = []
 
 # Настройки движения
 var max_horizontal_speed = 500.0
-var jump_force = -500.0
+var jump_force = -750.0
 var gravity = 1000.0
 var wall_stick_force = 250.0
 var max_fall_speed = 1500.0
@@ -15,9 +17,9 @@ var max_fall_speed = 1500.0
 var is_on_wall = false
 var wall_side = 0
 var speed = 0
-var acceleration = 25.0
+var acceleration = 10.0
 var max_speed = 900.0
-var friction = 0.97
+var friction = 0.96
 var air_resistance = 1.0
 var timer = 0
 
@@ -26,7 +28,7 @@ var is_sitting = false
 var double_jump = false
 var rebound = 0
 var direction
-var is_skiing = false
+var is_skiing = 0
 var skii_dir = 1
 
 var just_jumped = false
@@ -41,23 +43,83 @@ var target_angle = 0
 
 var speed_boost = 1
 var jump_boost = 1
+var is_started = false
+
+var death_timer = 0
+
+var is_dead = false
+
+var ground_timer=0
 
 
+func _ready():
+	# Инициализация пула плееров
+	for i in 5:
+		var player = AudioStreamPlayer.new()
+		add_child(player)
+		audio_players.append(player)
+		
+func play_sound(stream: AudioStream):
+	# Находим первый свободный плеер
+	for player in audio_players:
+		if not player.playing:
+			player.stream = stream
+			player.play()
+			return
+	# Если все заняты, можно создать новый плеер (опционально)
+	var new_player = AudioStreamPlayer.new()
+	add_child(new_player)
+	new_player.stream = stream
+	new_player.play()
+	audio_players.append(new_player)
 
 func _physics_process(delta):
-	direction = Input.get_axis("move_left", "move_right")
-	check_collisions()
-	handle_movement(direction, delta)
-	apply_gravity(delta)
-	handle_jump()
-	handle_dash()
-	handle_sit()
-	handle_effects()
-	animations()
-	move_and_slide()
+	
+	if abs(speed)>100:
+		is_started=true
+		death_timer=20
+	if abs(speed)<100&&is_started:
+		if death_timer>0:
+			death_timer-=1
+			pass
+	if !is_dead && (abs(speed)<100&&is_started&&death_timer==0)||position.y>2000:
+		if !$Death.playing:
+			$Death.play()
+		get_parent().start_fade()
+		is_dead = true
+		$AnimatedSprite2D.play("death")
+
+	if(!is_dead):
+		direction = Input.get_axis("move_left", "move_right")
+		check_collisions()
+		handle_movement(direction, delta)
+		apply_gravity(delta)
+		handle_jump()
+		handle_dash()
+		handle_sit()
+		handle_effects()
+		animations()
+		move_and_slide()
+		angle_pos()
+		
+		
 	speed_label.text = str(abs(round(speed)))
 	
-	print(jump_boost)
+	if($AnimatedSprite2D.animation=='run' && ($AnimatedSprite2D.frame==3 || $AnimatedSprite2D.frame==22)):
+		$Step.play(0.0)
+		$AnimatedSprite2D.frame+=1
+	
+	if($AnimatedSprite2D.animation=='wall_run' && ($AnimatedSprite2D.frame==6 || $AnimatedSprite2D.frame==23)):
+		$Step.play(0.0)
+		$AnimatedSprite2D.frame+=1
+		
+	if($AnimatedSprite2D.animation=='air_to_run' && ($AnimatedSprite2D.frame==1||$AnimatedSprite2D.frame==9)):
+		$Step.play(0.0)
+		$AnimatedSprite2D.frame+=1
+	if is_on_floor():
+		ground_timer=0
+	else:
+		ground_timer+=1
 
 func handle_effects():
 	var tilemap = get_parent().find_child("TileMap")
@@ -71,22 +133,72 @@ func handle_effects():
 		var eff=tile_data.get_custom_data('effect')
 		if(eff):
 			if(eff==1):
+				if speed_boost<2:
+					play_sound(preload("res://Sounds/Speed_Up_Panel.wav"))
+					speed*=1.5
 				speed_boost=2
 				max_speed=1200
+				jump_boost=1
 			elif eff==2:
-				jump_boost=2
+				jump_boost=2.5
+				speed_boost = 1
 			elif eff==3:
+				if speed_boost>0.5:
+					speed*=0.75
+					play_sound(preload("res://Sounds/Slow_Panel.wav"))
+				else:
+					speed*=0.985
 				speed_boost=0.5
-				max_speed=700
+				max_speed=0
+				jump_boost=1
 			else:
 				jump_boost = 1
 				max_speed=900
 				speed_boost=1
+		else:
+			jump_boost = 1
+			max_speed=900
+			speed_boost=1
 	else:
 		jump_boost = 1
 		max_speed=900
 		speed_boost=1
 	
+func angle_pos():
+	var th = 12
+	var th2 = 27
+	var tilemap = get_parent().find_child("TileMap")
+	var tile_pos = tilemap.local_to_map(position)
+	if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1)).get_custom_data('angle')))):
+		var loc = tilemap.map_to_local(tile_pos)
+		if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)).get_custom_data('angle')):
+			var slope_height=-64
+			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th2
+			if $AnimatedSprite2D.animation!='slide':
+				$AnimatedSprite2D.position.y = 34
+		elif(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)).get_custom_data('angle')):
+			var slope_height=64
+			if $AnimatedSprite2D.animation!='slide':
+				$AnimatedSprite2D.position.y = 55
+			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th
+	elif((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
+		var loc = tilemap.map_to_local(tile_pos)
+		if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)).get_custom_data('angle')):
+			if $AnimatedSprite2D.animation!='slide':
+				$AnimatedSprite2D.position.y = 34
+			var slope_height=-64
+			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + 64 + th2
+			
+		elif(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y+1)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y+1)).get_custom_data('angle')):
+			if $AnimatedSprite2D.animation!='slide':
+				$AnimatedSprite2D.position.y = 55
+			var slope_height=64
+			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + 64 + th
+	#else:
+		#if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
+			#print(1)
+		#else:
+			#print(0)
 
 func animations():
 	if is_on_wall:
@@ -106,18 +218,18 @@ func animations():
 		if wall_side == -1:
 			if direction != wall_side && direction!=0 && timer==0:
 				$AnimatedSprite2D.flip_h = false
-				$AnimatedSprite2D.position.x = -55
+				$AnimatedSprite2D.position.x = -60
 				$AnimatedSprite2D.rotation_degrees = 90
 				$AnimatedSprite2D.position.y = -30
 			else:
 				$AnimatedSprite2D.rotation_degrees = 0
 				$AnimatedSprite2D.position.y = 55
 				$AnimatedSprite2D.flip_h = true
-				$AnimatedSprite2D.position.x = -55
-	elif direction == 1 && is_on_floor() && !is_skiing:
+				$AnimatedSprite2D.position.x = -60
+	elif direction == 1 && is_on_floor() && is_skiing==0:
 		$AnimatedSprite2D.flip_h = false
 		$AnimatedSprite2D.position.x = -15
-	elif direction == -1 && is_on_floor() && !is_skiing:
+	elif direction == -1 && is_on_floor() && is_skiing==0:
 		$AnimatedSprite2D.flip_h = true
 		$AnimatedSprite2D.position.x = 15
 	else:
@@ -129,17 +241,25 @@ func animations():
 	#if $AnimatedSprite2D.animation=="air_to_run" && !:
 		#$AnimatedSprite2D.play('air')
 	
-	if $AnimatedSprite2D.animation=="air_to_run" && !is_on_floor():
-		$AnimatedSprite2D.play('jump')
+	#if $AnimatedSprite2D.animation=="air_to_run" && !is_on_floor():
+		#$Jump.play(0.0)
+	
 	
 	if(!is_sitting&&!is_on_wall):
 		$AnimatedSprite2D.position.y=55
-	if(is_skiing):
-		$AnimatedSprite2D.position.y=35
+	if(is_skiing!=0&&is_sitting):
+		if $AnimatedSprite2D.flip_h==true:
+			$AnimatedSprite2D.position.y=50
+		else:
+			$AnimatedSprite2D.position.y=70
 		$AnimatedSprite2D.play('slide')
 	elif(is_sitting):
 		$AnimatedSprite2D.play('slide')
 		$AnimatedSprite2D.position.y=23
+	#elif(is_skiing!=0):
+		#print(1)
+		#if $AnimatedSprite2D.flip_h == true:
+			#$AnimatedSprite2D.position.y=23
 	
 	elif ($AnimatedSprite2D.animation=="jump" or just_jumped) && !is_on_wall:
 		if !just_jumped && !is_on_floor():
@@ -191,8 +311,9 @@ func check_collisions():
 	elif test_move(transform, Vector2(1,0)):
 		var right_tile_pos = tile_pos + Vector2i(1,0)
 		var right_tile_data = tilemap.get_cell_tile_data(0, right_tile_pos)
-		if right_tile_data and right_tile_data.get_custom_data('climbable'):
+		if right_tile_data and right_tile_data.get_custom_data('climbable') and !is_sitting:
 			if(!is_on_wall && speed>30):
+				play_sound(preload("res://Sounds/Land.wav"))
 				timer = 15
 				if(!is_on_floor()):
 					rebound = speed
@@ -204,14 +325,15 @@ func check_collisions():
 				wall_side = 1
 				#rotation = deg_to_rad(-90 * wall_side)
 				if(save_speed):
-					speed+=300*speed_boost
+					speed+=100*speed_boost
 				else:
 					speed = 0
 	elif test_move(transform, Vector2(-1,0)):
 		var left_tile_pos = tile_pos + Vector2i(-1,0)
 		var left_tile_data = tilemap.get_cell_tile_data(0, left_tile_pos)
-		if left_tile_data and left_tile_data.get_custom_data('climbable'):
+		if left_tile_data and left_tile_data.get_custom_data('climbable') and !is_sitting:
 			if(!is_on_wall && speed<-30):
+				play_sound(preload("res://Sounds/Land.wav"))
 				timer = 15
 				if(!is_on_floor()):
 					rebound = speed
@@ -223,7 +345,7 @@ func check_collisions():
 				wall_side = -1
 				#rotation = deg_to_rad(-90 * wall_side)
 				if(save_speed):
-					speed-=300*speed_boost
+					speed-=100*speed_boost
 				else:
 					speed = 0
 				save_speed = false
@@ -244,7 +366,7 @@ func handle_movement(direction, delta):
 	if skii_timer == 0:
 		target_angle = 0
 		$AnimatedSprite2D.rotation_degrees = 0
-		is_skiing = false
+		is_skiing = 0
 	
 	#if(is_skiing):
 		#$AnimatedSprite2D.rotation=-45
@@ -263,18 +385,18 @@ func handle_movement(direction, delta):
 			if(speed<max_speed && speed>-max_speed):
 				speed += direction * acceleration
 			if(speed>max_speed):
-				speed -= direction * acceleration*0.5
+				speed -= 1/speed_boost
 			elif(speed<-max_speed):
-				speed -= direction * acceleration*0.5
+				speed += 1/speed_boost
 	else:
 		# Замедление при отпущенных клавишах
 		if is_on_floor() or is_on_wall:
 			if is_sitting:
-				if !is_skiing:
-					speed *= friction
+				if is_skiing==0:
+					speed -= sign(speed)*2
 			else:
 				speed *= friction*friction
-		elif !is_skiing:
+		elif is_skiing==0:
 			speed *= air_resistance
 		
 		# Полная остановка при маленьких значениях
@@ -288,7 +410,7 @@ func handle_movement(direction, delta):
 		
 		velocity.y += gravity * delta * 10
 	
-	elif  is_skiing:
+	elif  is_skiing!=0:
 		velocity.x = clamp(speed,-300,300)
 	else:
 		velocity.x = speed
@@ -297,7 +419,7 @@ func handle_movement(direction, delta):
 		velocity.x = speed
 
 func apply_gravity(delta):
-	if not is_on_floor() and not is_on_wall and not is_skiing:
+	if not is_on_floor() and not is_on_wall and is_skiing==0:
 		velocity.y += gravity * delta
 		velocity.y = min(velocity.y, max_fall_speed)
 		
@@ -307,7 +429,7 @@ func handle_jump():
 	if is_on_wall or is_on_floor():
 		double_jump = true
 	if Input.is_action_just_pressed("jump"):
-		if is_on_wall && direction==-wall_side:
+		if is_on_wall && timer>0:
 			just_jumped=true
 			$AnimatedSprite2D.play('wall_jump')
 			$AnimatedSprite2D.frame = 1
@@ -321,42 +443,57 @@ func handle_jump():
 			if speed == 0:
 				speed = (-wall_side*300)
 			if timer>0:
-				if Input.is_action_pressed("w"):
+				if direction==-wall_side:
+					speed+=sign(speed)*200
 					velocity.y -= 300*jump_boost
-				if Input.is_action_pressed("s"):
-					velocity.y = 300*jump_boost
 		elif is_on_wall:
 			if(wall_side == 1 && direction==wall_side):
 				var tilemap = get_parent().find_child("TileMap")
 				var tile_pos = tilemap.local_to_map(position)
-				if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-2)) == null or tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-3)) == null:
+				if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-3)) == null:
+					play_sound(preload("res://Sounds/Land_on_Wall.wav"))
 					position = tilemap.map_to_local(Vector2i(tile_pos.x+1, tile_pos.y-1))
 					is_on_wall = false
 					velocity=Vector2.ZERO
 					rotation = 0.0
 					wall_side = 0
 					speed = speed+rebound
+				else:
+					$Jump.play(0.0)
+					$AnimatedSprite2D.frame = 0
+					velocity.x = -wall_side * abs(jump_force) * 3
+					velocity.y = jump_force * 0.8 * jump_boost
+					is_on_wall = false
+					speed = (-wall_side*300)*speed_boost
 			elif(wall_side == -1 && direction==wall_side):
 				var tilemap = get_parent().find_child("TileMap")
 				var tile_pos = tilemap.local_to_map(position)
-				if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y-2)) == null or tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y-3)) == null:
+				if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y-3)) == null:
+					play_sound(preload("res://Sounds/Land_on_Wall.wav"))
 					position = tilemap.map_to_local(Vector2i(tile_pos.x-1, tile_pos.y-1))
 					velocity=Vector2.ZERO
 					rotation = 0.0
 					wall_side = 0
 					speed = speed+rebound
+				else:
+					$Jump.play(0.0)
+					$AnimatedSprite2D.frame = 0
+					velocity.x = -wall_side * abs(jump_force) * 3
+					velocity.y = jump_force * 0.8 * jump_boost
+					is_on_wall = false
+					speed = (-wall_side*300)*speed_boost
 			else:
-				$AnimatedSprite2D.play('jump')
+				$Jump.play(0.0)
 				$AnimatedSprite2D.frame = 0
 				velocity.x = -wall_side * abs(jump_force) * 3
 				velocity.y = jump_force * 0.8 * jump_boost
 				is_on_wall = false
 				speed = (-wall_side*300)*speed_boost
 			#if right_tile_data and right_tile_data.get_custom_data('climbable'):
-		elif is_on_floor():
+		elif is_on_floor()||ground_timer<=4:
 			velocity.y = jump_force * jump_boost
 			position.y-=10
-			$AnimatedSprite2D.play("jump")
+			$Jump.play(0.0)
 			$AnimatedSprite2D.frame = 0
 		elif double_jump==true&&!is_on_wall&&stamina.value>0:
 			stamina.value-=1
@@ -364,41 +501,52 @@ func handle_jump():
 			velocity.y = jump_force * jump_boost
 			position.y-=10
 			$AnimatedSprite2D.play("jump")
+			play_sound(preload("res://Sounds/Second_Jump.wav"))
 			$AnimatedSprite2D.frame = 0
 			
 func handle_sit():
+	
+	if !$Slide.playing && (is_on_floor()||is_skiing) && is_sitting:
+		$Slide.play()
+	elif (!is_on_floor()&&!is_skiing)||!is_sitting||is_on_wall:
+		$Slide.stop()
+	
+	###
+	
+	var tilemap = get_parent().find_child("TileMap")
+	var tile_pos = tilemap.local_to_map(position)
+				#if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-2)) == null or tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-3)) == null:
+	
 	if (Input.is_action_just_pressed("sit")) and !is_on_wall:
 		is_sitting = true
-		position.y += 50
 	elif !Input.is_action_pressed("sit") or is_on_wall:
-		is_sitting = false
-	
-	if Input.is_action_pressed("sit") and !is_on_wall:
-		is_sitting = true
+		if is_sitting&&tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y-1))==null:
+			is_sitting = false
+		
+	###
 		
 	if !is_sitting:
-		is_skiing = false
+		is_skiing = 0
 		$CollisionShape2D.scale.y = 1
 	else:
 		$CollisionShape2D.scale.y=0.5
-		var tilemap = get_parent().find_child("TileMap")
-		var tile_pos = tilemap.local_to_map(position)
+		var th = 30
 		if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1)).get_custom_data('angle')))):
-			is_skiing = true
 			skii_timer = 5
 			#$CollisionShape2D.disabled = true
 			var loc = tilemap.map_to_local(tile_pos)
-			$AnimatedSprite2D.position.y = 175
 			
 			if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)).get_custom_data('angle')):
 				if speed>0:
 					speed=0
 				speed-=10*speed_boost
 				
+				is_skiing=-1
+				
 				skii_timer = 5
 				
 				var slope_height=-64
-				position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + 62
+				position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th
 				
 				target_angle = -45
 				
@@ -410,13 +558,54 @@ func handle_sit():
 					speed=0
 				speed+=10*speed_boost
 				
+				is_skiing=1
+				
 				skii_timer = 5
 				
 				$AnimatedSprite2D.flip_h = false
 				$AnimatedSprite2D.position.x = -abs($AnimatedSprite2D.position.x)
 				
 				var slope_height=64
-				position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + 62
+				position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th
+				
+				target_angle = 45
+		
+		if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
+			skii_timer = 5
+			#$CollisionShape2D.disabled = true
+			var loc = tilemap.map_to_local(tile_pos)
+			
+			if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)).get_custom_data('angle')):
+				if speed>0:
+					speed=0
+				speed-=10*speed_boost
+				
+				is_skiing=-1
+				
+				skii_timer = 5
+				
+				var slope_height=-64
+				position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th + 64
+				
+				target_angle = -45
+				
+				$AnimatedSprite2D.flip_h = true
+				$AnimatedSprite2D.position.x = abs($AnimatedSprite2D.position.x)
+				
+			elif(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y+1)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y+1)).get_custom_data('angle')):
+				if speed<0:
+					speed=0
+				speed+=10*speed_boost
+				
+				is_skiing=1
+				
+				skii_timer = 5
+				
+				$AnimatedSprite2D.flip_h = false
+				$AnimatedSprite2D.position.x = -abs($AnimatedSprite2D.position.x)
+				
+				var slope_height=64
+				position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th + 64
 				
 				target_angle = 45
 		else:
@@ -427,18 +616,20 @@ func handle_dash():
 		var f = 0
 		if direction !=0:
 			f=1
-			speed+=direction*600*speed_boost
+			speed+=direction*300*speed_boost
 			position.x+=20*direction
 		if Input.is_action_pressed("w"):
 			f=1
-			velocity.y -= 400 * jump_boost
+			velocity.y -= 600 * jump_boost
 		if Input.is_action_pressed("s"):
 			f=1
-			velocity.y += 400 * jump_boost
+			velocity.y += 600 * jump_boost
 		if f:
 			if(is_on_floor()):
+				play_sound(preload("res://Sounds/Dash.wav"))
 				$AnimatedSprite2D.play('dash')
 			elif(!is_on_floor() && !is_on_wall):
+				play_sound(preload("res://Sounds/Dash.wav"))
 				$AnimatedSprite2D.play("air_dash")
 			
 			if direction==-1:
@@ -447,8 +638,6 @@ func handle_dash():
 				$AnimatedSprite2D.flip_h=0
 				
 			stamina.value-=1
-
-
 
 func _on_animated_sprite_2d_animation_finished():
 	if $AnimatedSprite2D.animation == 'air_to_run':
@@ -460,9 +649,10 @@ func _on_animated_sprite_2d_animation_finished():
 		#$AnimatedSprite2D.flip_h=!$AnimatedSprite2D.flip_h
 	pass # Replace with function body.
 
-
 func _on_animated_sprite_2d_animation_changed():
-	
+	var an = $AnimatedSprite2D.animation
+	if(an=='wall_jump'):
+		play_sound(preload("res://Sounds/Jumppad.wav"))
 	if($AnimatedSprite2D.animation=='wall_jump'):
 		was_wall_jump = true
 	else:

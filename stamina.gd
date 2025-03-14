@@ -1,4 +1,4 @@
-extends ProgressBar
+extends TextureProgressBar
 var time_since_last_gain: float = 0.0
 
 var max_stamina=3
