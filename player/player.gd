@@ -410,10 +410,11 @@ func handle_movement(direction, delta):
 		
 		velocity.y += gravity * delta * 10
 	
-	elif  is_skiing!=0:
-		velocity.x = clamp(speed,-300,300)
-	else:
-		velocity.x = speed
+	#elif  is_skiing!=0:
+		#velocity.x = clamp(speed,-300,300)
+	#else:
+		#velocity.x = speed
+	velocity.x = speed
 	
 	if direction == 0 and not is_on_wall:
 		velocity.x = speed
@@ -539,7 +540,7 @@ func handle_sit():
 			if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)).get_custom_data('angle')):
 				if speed>0:
 					speed=0
-				speed-=10*speed_boost
+				speed-=5*speed_boost
 				
 				is_skiing=-1
 				
@@ -556,7 +557,7 @@ func handle_sit():
 			elif(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)).get_custom_data('angle')):
 				if speed<0:
 					speed=0
-				speed+=10*speed_boost
+				speed+=5*speed_boost
 				
 				is_skiing=1
 				
