@@ -8,7 +8,7 @@ extends CharacterBody2D
 
 # Настройки движения
 var max_horizontal_speed = 500.0
-var jump_force = -750.0
+var jump_force = -600.0
 var gravity = 1000.0
 var wall_stick_force = 250.0
 var max_fall_speed = 1500.0
@@ -19,7 +19,7 @@ var wall_side = 0
 var speed = 0
 var acceleration = 10.0
 var max_speed = 900.0
-var friction = 0.96
+var friction = 0.98
 var air_resistance = 1.0
 var timer = 0
 
@@ -80,7 +80,7 @@ func _physics_process(delta):
 		death_timer=20
 	if abs(speed)<100&&is_started:
 		if death_timer>0:
-			death_timer-=1
+			#death_timer-=1
 			pass
 	if !is_dead && (abs(speed)<100&&is_started&&death_timer==0)||position.y>2000:
 		if !$Death.playing:
@@ -96,11 +96,14 @@ func _physics_process(delta):
 		apply_gravity(delta)
 		handle_jump()
 		handle_dash()
-		handle_sit()
 		handle_effects()
 		animations()
+		handle_sit()
+		angle_pos()
 		move_and_slide()
 		angle_pos()
+		
+		
 		
 		
 	speed_label.text = str(abs(round(speed)))
@@ -165,10 +168,11 @@ func handle_effects():
 		speed_boost=1
 	
 func angle_pos():
-	var th = 12
-	var th2 = 27
+	var th = 15
+	var th2 = 30
 	var tilemap = get_parent().find_child("TileMap")
 	var tile_pos = tilemap.local_to_map(position)
+	
 	if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1)).get_custom_data('angle')))):
 		var loc = tilemap.map_to_local(tile_pos)
 		if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)).get_custom_data('angle')):
@@ -257,7 +261,6 @@ func animations():
 		$AnimatedSprite2D.play('slide')
 		$AnimatedSprite2D.position.y=23
 	#elif(is_skiing!=0):
-		#print(1)
 		#if $AnimatedSprite2D.flip_h == true:
 			#$AnimatedSprite2D.position.y=23
 	
@@ -314,7 +317,7 @@ func check_collisions():
 		if right_tile_data and right_tile_data.get_custom_data('climbable') and !is_sitting:
 			if(!is_on_wall && speed>30):
 				play_sound(preload("res://Sounds/Land.wav"))
-				timer = 15
+				timer = 25
 				if(!is_on_floor()):
 					rebound = speed
 					speed=0
@@ -414,7 +417,8 @@ func handle_movement(direction, delta):
 		#velocity.x = clamp(speed,-300,300)
 	#else:
 		#velocity.x = speed
-	velocity.x = speed
+	else:
+		velocity.x = speed
 	
 	if direction == 0 and not is_on_wall:
 		velocity.x = speed
@@ -557,7 +561,7 @@ func handle_sit():
 			elif(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)).get_custom_data('angle')):
 				if speed<0:
 					speed=0
-				speed+=5*speed_boost
+				speed+=10*speed_boost
 				
 				is_skiing=1
 				
