@@ -50,6 +50,7 @@ var death_timer = 0
 var is_dead = false
 
 var ground_timer=0
+var stop_skiing = 0
 
 
 func _ready():
@@ -173,7 +174,7 @@ func angle_pos():
 	var tilemap = get_parent().find_child("TileMap")
 	var tile_pos = tilemap.local_to_map(position)
 	
-	if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1)).get_custom_data('angle')))):
+	if(stop_skiing == 0 && (tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1)).get_custom_data('angle')))):
 		var loc = tilemap.map_to_local(tile_pos)
 		if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)).get_custom_data('angle')):
 			var slope_height=-64
@@ -185,7 +186,7 @@ func angle_pos():
 			if $AnimatedSprite2D.animation!='slide':
 				$AnimatedSprite2D.position.y = 55
 			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th
-	elif((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
+	elif(stop_skiing == 0 && (tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
 		var loc = tilemap.map_to_local(tile_pos)
 		if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)).get_custom_data('angle')):
 			if $AnimatedSprite2D.animation!='slide':
@@ -495,7 +496,8 @@ func handle_jump():
 				is_on_wall = false
 				speed = (-wall_side*300)*speed_boost
 			#if right_tile_data and right_tile_data.get_custom_data('climbable'):
-		elif is_on_floor()||ground_timer<=4:
+		elif (is_on_floor()||ground_timer<=4||is_skiing):
+			stop_skiing = 15
 			velocity.y = jump_force * jump_boost
 			position.y-=10
 			$Jump.play(0.0)
@@ -511,6 +513,9 @@ func handle_jump():
 			
 func handle_sit():
 	
+	if stop_skiing > 0:
+		stop_skiing-=1
+	
 	if !$Slide.playing && (is_on_floor()||is_skiing) && is_sitting:
 		$Slide.play()
 	elif (!is_on_floor()&&!is_skiing)||!is_sitting||is_on_wall:
@@ -522,7 +527,7 @@ func handle_sit():
 	var tile_pos = tilemap.local_to_map(position)
 				#if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-2)) == null or tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-3)) == null:
 	
-	if (Input.is_action_just_pressed("sit")) and !is_on_wall:
+	if (Input.is_action_pressed("sit")) and !is_on_wall:
 		is_sitting = true
 	elif !Input.is_action_pressed("sit") or is_on_wall:
 		if is_sitting&&tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y-1))==null:
@@ -530,7 +535,7 @@ func handle_sit():
 		
 	###
 		
-	if !is_sitting:
+	if !is_sitting || stop_skiing>0:
 		is_skiing = 0
 		$CollisionShape2D.scale.y = 1
 	else:
@@ -546,7 +551,10 @@ func handle_sit():
 					speed=0
 				speed-=5*speed_boost
 				
-				is_skiing=-1
+				if(stop_skiing==0):
+					is_skiing=-1
+				else:
+					is_skiing=0
 				
 				skii_timer = 5
 				
@@ -563,7 +571,10 @@ func handle_sit():
 					speed=0
 				speed+=10*speed_boost
 				
-				is_skiing=1
+				if(stop_skiing==0):
+					is_skiing=-1
+				else:
+					is_skiing=0
 				
 				skii_timer = 5
 				
@@ -585,7 +596,10 @@ func handle_sit():
 					speed=0
 				speed-=10*speed_boost
 				
-				is_skiing=-1
+				if(stop_skiing==0):
+					is_skiing=-1
+				else:
+					is_skiing=0
 				
 				skii_timer = 5
 				
@@ -602,7 +616,10 @@ func handle_sit():
 					speed=0
 				speed+=10*speed_boost
 				
-				is_skiing=1
+				if(stop_skiing==0):
+					is_skiing=1
+				else:
+					is_skiing=0
 				
 				skii_timer = 5
 				
