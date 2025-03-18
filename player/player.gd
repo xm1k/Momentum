@@ -51,6 +51,7 @@ var is_dead = false
 
 var ground_timer=0
 var stop_skiing = 0
+var was_skiing = 0
 
 
 func _ready():
@@ -75,7 +76,6 @@ func play_sound(stream: AudioStream):
 	audio_players.append(new_player)
 
 func _physics_process(delta):
-	
 	if abs(speed)>100:
 		is_started=true
 		death_timer=20
@@ -109,17 +109,18 @@ func _physics_process(delta):
 		
 	speed_label.text = str(abs(round(speed)))
 	
-	if($AnimatedSprite2D.animation=='run' && ($AnimatedSprite2D.frame==3 || $AnimatedSprite2D.frame==22)):
-		$Step.play(0.0)
-		$AnimatedSprite2D.frame+=1
-	
-	if($AnimatedSprite2D.animation=='wall_run' && ($AnimatedSprite2D.frame==6 || $AnimatedSprite2D.frame==23)):
-		$Step.play(0.0)
-		$AnimatedSprite2D.frame+=1
+	#if($AnimatedSprite2D.animation=='run' && ($AnimatedSprite2D.frame==3 || $AnimatedSprite2D.frame==22)):
+		#$Step.play(0.0)
+		#$AnimatedSprite2D.frame+=1
+	#
+	#if($AnimatedSprite2D.animation=='wall_run' && ($AnimatedSprite2D.frame==6 || $AnimatedSprite2D.frame==23)):
+		#$Step.play(0.0)
+		#$AnimatedSprite2D.frame+=1
+		#
+	#if($AnimatedSprite2D.animation=='air_to_run' && ($AnimatedSprite2D.frame==1||$AnimatedSprite2D.frame==9)):
+		#$Step.play(0.0)
+		#$AnimatedSprite2D.frame+=1
 		
-	if($AnimatedSprite2D.animation=='air_to_run' && ($AnimatedSprite2D.frame==1||$AnimatedSprite2D.frame==9)):
-		$Step.play(0.0)
-		$AnimatedSprite2D.frame+=1
 	if is_on_floor():
 		ground_timer=0
 	else:
@@ -177,29 +178,39 @@ func angle_pos():
 	if(stop_skiing == 0 && (tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+1)).get_custom_data('angle')))):
 		var loc = tilemap.map_to_local(tile_pos)
 		if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)).get_custom_data('angle')):
+			was_skiing=-1
 			var slope_height=-64
 			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th2
 			if $AnimatedSprite2D.animation!='slide':
 				$AnimatedSprite2D.position.y = 34
 		elif(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y)).get_custom_data('angle')):
+			was_skiing=1
 			var slope_height=64
 			if $AnimatedSprite2D.animation!='slide':
 				$AnimatedSprite2D.position.y = 55
 			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + th
 	elif(stop_skiing == 0 && (tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
+		
 		var loc = tilemap.map_to_local(tile_pos)
 		if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y+1)).get_custom_data('angle')):
+			was_skiing=-1
 			if $AnimatedSprite2D.animation!='slide':
 				$AnimatedSprite2D.position.y = 34
 			var slope_height=-64
 			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + 64 + th2
 			
 		elif(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y+1)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y+1)).get_custom_data('angle')):
+			was_skiing=1
 			if $AnimatedSprite2D.animation!='slide':
 				$AnimatedSprite2D.position.y = 55
 			var slope_height=64
 			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + 64 + th
-	#else:
+	else:
+		if(was_skiing==-1 && speed<0):
+			position.y+=70
+		elif(was_skiing==1 && speed>0):
+			position.y+=30
+		was_skiing=0
 		#if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
 			#print(1)
 		#else:
@@ -249,7 +260,6 @@ func animations():
 	#if $AnimatedSprite2D.animation=="air_to_run" && !is_on_floor():
 		#$Jump.play(0.0)
 	
-	
 	if(!is_sitting&&!is_on_wall):
 		$AnimatedSprite2D.position.y=55
 	if(is_skiing!=0&&is_sitting):
@@ -259,6 +269,10 @@ func animations():
 			$AnimatedSprite2D.position.y=70
 		$AnimatedSprite2D.play('slide')
 	elif(is_sitting):
+		if $AnimatedSprite2D.position.y==70:
+			position.y+=70
+		elif $AnimatedSprite2D.position.y==50:
+			position.y+=70
 		$AnimatedSprite2D.play('slide')
 		$AnimatedSprite2D.position.y=23
 	#elif(is_skiing!=0):
@@ -354,6 +368,9 @@ func check_collisions():
 					speed = 0
 				save_speed = false
 	else:
+		if is_on_wall==true:
+			velocity.y=speed*-wall_side
+			speed=0
 		wall_side = 0
 		is_on_wall = false
 		rotation = 0.0
@@ -366,7 +383,7 @@ func handle_movement(direction, delta):
 		$AnimatedSprite2D.rotation_degrees=target_angle
 	
 	if skii_timer>0:
-		skii_timer-=1
+		skii_timer-=1 
 	if skii_timer == 0:
 		target_angle = 0
 		$AnimatedSprite2D.rotation_degrees = 0
@@ -526,6 +543,8 @@ func handle_sit():
 	var tilemap = get_parent().find_child("TileMap")
 	var tile_pos = tilemap.local_to_map(position)
 				#if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-2)) == null or tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-3)) == null:
+	if(Input.is_action_just_pressed("sit")):
+		position.y+=30
 	
 	if (Input.is_action_pressed("sit")) and !is_on_wall:
 		is_sitting = true
@@ -545,11 +564,10 @@ func handle_sit():
 			skii_timer = 5
 			#$CollisionShape2D.disabled = true
 			var loc = tilemap.map_to_local(tile_pos)
-			
 			if(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)) && tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y)).get_custom_data('angle')):
 				if speed>0:
 					speed=0
-				speed-=5*speed_boost
+				speed-=10*speed_boost
 				
 				if(stop_skiing==0):
 					is_skiing=-1
@@ -681,4 +699,22 @@ func _on_animated_sprite_2d_animation_changed():
 		if(was_wall_jump):
 			$AnimatedSprite2D.flip_h=!$AnimatedSprite2D.flip_h
 		was_wall_jump = false
+	pass # Replace with function body.
+	
+	
+
+
+func _on_animated_sprite_2d_frame_changed():
+	var anim = $AnimatedSprite2D.animation
+	var frame = $AnimatedSprite2D.frame
+	
+	# Для каждой анимации задайте нужные кадры
+	var step_frames = {
+		"run": [3, 22],
+		"wall_run": [6, 23],
+		"air_to_run": [1, 9]
+	}
+	
+	if anim in step_frames and frame in step_frames[anim]:
+		$Step.play(0.0)
 	pass # Replace with function body.
