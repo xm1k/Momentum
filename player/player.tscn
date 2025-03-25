@@ -1583,7 +1583,7 @@ script = ExtResource("1_hko1f")
 
 [node name="CollisionShape2D" type="CollisionPolygon2D" parent="."]
 position = Vector2(0, -1)
-polygon = PackedVector2Array(0, 57, -31, 57, -63, 23, -37, -23, -24, -50, -7, -60, 24, -59, 52, -31, 52, 19, 28.6263, 36.0808)
+polygon = PackedVector2Array(0, 57, -16, 57, -63, 23, -37, -23, -24, -50, -7, -60, 24, -59, 52, -31, 52, 19, 28.6263, 36.0808)
 one_way_collision_margin = 0.0
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]

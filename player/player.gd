@@ -107,7 +107,7 @@ func _physics_process(delta):
 		
 		
 		
-	speed_label.text = str(abs(round(speed)))
+	speed_label.text = str(abs(round(velocity.x))+abs(round(velocity.y)))
 	
 	#if($AnimatedSprite2D.animation=='run' && ($AnimatedSprite2D.frame==3 || $AnimatedSprite2D.frame==22)):
 		#$Step.play(0.0)
@@ -206,10 +206,13 @@ func angle_pos():
 			var slope_height=64
 			position.y = loc.y + ((position.x-loc.x) / 64) * slope_height - 64/2 + 64 + th
 	else:
+		
+		if is_sitting:
+			was_skiing=0
 		if(was_skiing==-1 && speed<0):
 			position.y+=70
 		elif(was_skiing==1 && speed>0):
-			position.y+=30
+			position.y+=70
 		was_skiing=0
 		#if((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2))) && ((tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y+2)).get_custom_data('angle')))):
 			#print(1)
@@ -272,7 +275,7 @@ func animations():
 		if $AnimatedSprite2D.position.y==70:
 			position.y+=70
 		elif $AnimatedSprite2D.position.y==50:
-			position.y+=70
+			position.y+=50
 		$AnimatedSprite2D.play('slide')
 		$AnimatedSprite2D.position.y=23
 	#elif(is_skiing!=0):
@@ -330,9 +333,9 @@ func check_collisions():
 		var right_tile_pos = tile_pos + Vector2i(1,0)
 		var right_tile_data = tilemap.get_cell_tile_data(0, right_tile_pos)
 		if right_tile_data and right_tile_data.get_custom_data('climbable') and !is_sitting:
-			if(!is_on_wall && speed>30):
+			if(!is_on_wall && (speed>30||(tilemap.get_cell_tile_data(0, tile_pos + Vector2i(1,-1))&&tilemap.get_cell_tile_data(0, tile_pos + Vector2i(1,-1)).get_custom_data('climbable')))):
 				play_sound(preload("res://Sounds/Land.wav"))
-				timer = 25
+				timer = 15
 				if(!is_on_floor()):
 					rebound = speed
 					speed=0
@@ -343,6 +346,7 @@ func check_collisions():
 				wall_side = 1
 				#rotation = deg_to_rad(-90 * wall_side)
 				if(save_speed):
+					timer = 0
 					speed+=100*speed_boost
 				else:
 					speed = 0
@@ -350,7 +354,7 @@ func check_collisions():
 		var left_tile_pos = tile_pos + Vector2i(-1,0)
 		var left_tile_data = tilemap.get_cell_tile_data(0, left_tile_pos)
 		if left_tile_data and left_tile_data.get_custom_data('climbable') and !is_sitting:
-			if(!is_on_wall && speed<-30):
+			if(!is_on_wall && (speed<-30||(tilemap.get_cell_tile_data(0, tile_pos + Vector2i(-1,-1))&&tilemap.get_cell_tile_data(0, tile_pos + Vector2i(-1,-1)).get_custom_data('climbable')))):
 				play_sound(preload("res://Sounds/Land.wav"))
 				timer = 15
 				if(!is_on_floor()):
@@ -363,6 +367,7 @@ func check_collisions():
 				wall_side = -1
 				#rotation = deg_to_rad(-90 * wall_side)
 				if(save_speed):
+					timer = 0
 					speed-=100*speed_boost
 				else:
 					speed = 0
@@ -400,7 +405,7 @@ func handle_movement(direction, delta):
 		timer-=1
 	if direction != 0 && (is_on_floor() or is_on_wall):
 		if sign(speed) != direction and abs(speed) > 10:
-			speed *= 0.7
+			speed *= 0.85
 		else:
 			# Разгон в текущем направлении
 			if(speed<max_speed && speed>-max_speed):
@@ -451,7 +456,24 @@ func handle_jump():
 		rebound = 0
 	if is_on_wall or is_on_floor():
 		double_jump = true
-	if Input.is_action_just_pressed("jump"):
+	
+	var f=0
+	
+	if Input.is_action_pressed("jump"):
+		if is_on_wall && direction==wall_side:
+			var tilemap = get_parent().find_child("TileMap")
+			var tile_pos = tilemap.local_to_map(position)
+			if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1*wall_side, tile_pos.y-2)) == null:
+				f=1
+				play_sound(preload("res://Sounds/Land_on_Wall.wav"))
+				position = tilemap.map_to_local(Vector2i(tile_pos.x+1*wall_side, tile_pos.y-2))
+				is_on_wall = false
+				velocity=Vector2.ZERO
+				rotation = 0.0
+				wall_side = 0
+				speed = speed+rebound
+				
+	if Input.is_action_just_pressed("jump")&&f==0:
 		if is_on_wall && timer>0:
 			just_jumped=true
 			$AnimatedSprite2D.play('wall_jump')
@@ -469,49 +491,56 @@ func handle_jump():
 				if direction==-wall_side:
 					speed+=sign(speed)*200
 					velocity.y -= 300*jump_boost
-		elif is_on_wall:
-			if(wall_side == 1 && direction==wall_side):
-				var tilemap = get_parent().find_child("TileMap")
-				var tile_pos = tilemap.local_to_map(position)
-				if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-3)) == null:
-					play_sound(preload("res://Sounds/Land_on_Wall.wav"))
-					position = tilemap.map_to_local(Vector2i(tile_pos.x+1, tile_pos.y-1))
-					is_on_wall = false
-					velocity=Vector2.ZERO
-					rotation = 0.0
-					wall_side = 0
-					speed = speed+rebound
-				else:
-					$Jump.play(0.0)
-					$AnimatedSprite2D.frame = 0
-					velocity.x = -wall_side * abs(jump_force) * 3
-					velocity.y = jump_force * 0.8 * jump_boost
-					is_on_wall = false
-					speed = (-wall_side*300)*speed_boost
-			elif(wall_side == -1 && direction==wall_side):
-				var tilemap = get_parent().find_child("TileMap")
-				var tile_pos = tilemap.local_to_map(position)
-				if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y-3)) == null:
-					play_sound(preload("res://Sounds/Land_on_Wall.wav"))
-					position = tilemap.map_to_local(Vector2i(tile_pos.x-1, tile_pos.y-1))
-					velocity=Vector2.ZERO
-					rotation = 0.0
-					wall_side = 0
-					speed = speed+rebound
-				else:
-					$Jump.play(0.0)
-					$AnimatedSprite2D.frame = 0
-					velocity.x = -wall_side * abs(jump_force) * 3
-					velocity.y = jump_force * 0.8 * jump_boost
-					is_on_wall = false
-					speed = (-wall_side*300)*speed_boost
-			else:
-				$Jump.play(0.0)
-				$AnimatedSprite2D.frame = 0
-				velocity.x = -wall_side * abs(jump_force) * 3
-				velocity.y = jump_force * 0.8 * jump_boost
-				is_on_wall = false
-				speed = (-wall_side*300)*speed_boost
+		#elif is_on_wall:
+			#if(wall_side == 1 && direction==wall_side):
+				#var tilemap = get_parent().find_child("TileMap")
+				#var tile_pos = tilemap.local_to_map(position)
+				#if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x+1, tile_pos.y-2)) == null:
+					#play_sound(preload("res://Sounds/Land_on_Wall.wav"))
+					#position = tilemap.map_to_local(Vector2i(tile_pos.x+2, tile_pos.y-2))
+					#is_on_wall = false
+					#velocity=Vector2.ZERO
+					#rotation = 0.0
+					#wall_side = 0
+					#speed = speed+rebound
+				##else:
+					##$Jump.play(0.0)
+					##$AnimatedSprite2D.frame = 0
+					##velocity.x = -wall_side * abs(jump_force) * 3
+					##velocity.y = jump_force * 0.8 * jump_boost + speed*-wall_side
+					##is_on_wall = false
+					##speed = (-wall_side*300)*speed_boost
+			#elif(wall_side == -1 && direction==wall_side):
+				#var tilemap = get_parent().find_child("TileMap")
+				#var tile_pos = tilemap.local_to_map(position)
+				#if tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x-1, tile_pos.y-2)) == null:
+					#play_sound(preload("res://Sounds/Land_on_Wall.wav"))
+					#position = tilemap.map_to_local(Vector2i(tile_pos.x-2, tile_pos.y-2))
+					#velocity=Vector2.ZERO
+					#rotation = 0.0
+					#wall_side = 0
+					#speed = speed+rebound
+				##else:
+					##$Jump.play(0.0)
+					##$AnimatedSprite2D.frame = 0
+					##velocity.x = -wall_side * abs(jump_force) * 3 
+					##velocity.y = jump_force * 0.8 * jump_boost + speed*-wall_side
+					##is_on_wall = false
+					##speed = (-wall_side*300)*speed_boost
+		elif(direction!=wall_side && is_on_wall && direction!=0):
+			$Jump.play(0.0)
+			$AnimatedSprite2D.frame = 0
+			velocity.x = -wall_side * abs(jump_force) * 3 
+			velocity.y = jump_force * 0.8 * jump_boost + speed/2*-wall_side
+			is_on_wall = false
+			speed = (-wall_side*700)*speed_boost
+		elif(is_on_wall && direction==0):
+			$Jump.play(0.0)
+			$AnimatedSprite2D.frame = 0
+			velocity.x = -wall_side * abs(jump_force) * 3
+			velocity.y = speed/2*-wall_side
+			is_on_wall = false
+			speed = (-wall_side*300)*speed_boost
 			#if right_tile_data and right_tile_data.get_custom_data('climbable'):
 		elif (is_on_floor()||ground_timer<=4||is_skiing):
 			stop_skiing = 15
@@ -549,7 +578,7 @@ func handle_sit():
 	if (Input.is_action_pressed("sit")) and !is_on_wall:
 		is_sitting = true
 	elif !Input.is_action_pressed("sit") or is_on_wall:
-		if is_sitting&&tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y-1))==null:
+		if is_sitting&&(tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y-1))==null || tilemap.get_cell_tile_data(0,Vector2i(tile_pos.x, tile_pos.y-1)).get_custom_data('curve')):
 			is_sitting = false
 		
 	###
