@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://dipnk5eu8jcp4"]
+
+[ext_resource type="Script" path="res://jump_vfx.gd" id="1_e5qc0"]
+[ext_resource type="PackedScene" uid="uid://cwn6gjgnhiorl" path="res://player/jump_vfx.tscn" id="1_tcumf"]
+
+[node name="jump vfx" type="Node2D"]
+script = ExtResource("1_e5qc0")
+
+[node name="jump vfx" parent="." instance=ExtResource("1_tcumf")]
+position = Vector2(76, 59)
+rotation = -1.0472
+frame = 21
+frame_progress = 1.0
+
+[connection signal="animation_finished" from="jump vfx" to="." method="_on_jump_vfx_animation_finished"]

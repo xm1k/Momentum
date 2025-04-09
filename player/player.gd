@@ -108,6 +108,8 @@ func _physics_process(delta):
 		
 		
 	speed_label.text = str(abs(round(velocity.x))+abs(round(velocity.y)))
+	$AnimatedSprite2D/led.flip_h = $AnimatedSprite2D.flip_h
+	$AnimatedSprite2D/led.modulate = Color8(int(abs(speed/3)),int(abs(speed/3)),int(abs(speed/3)))
 	
 	#if($AnimatedSprite2D.animation=='run' && ($AnimatedSprite2D.frame==3 || $AnimatedSprite2D.frame==22)):
 		#$Step.play(0.0)
@@ -548,12 +550,14 @@ func handle_jump():
 			position.y-=10
 			$Jump.play(0.0)
 			$AnimatedSprite2D.frame = 0
+			$AnimatedSprite2D.play("jump")
 		elif double_jump==true&&!is_on_wall&&stamina.value>0:
 			stamina.value-=1
 			double_jump = false
 			velocity.y = jump_force * jump_boost
 			position.y-=10
 			$AnimatedSprite2D.play("jump")
+			create_jump_vfx()
 			play_sound(preload("res://Sounds/Second_Jump.wav"))
 			$AnimatedSprite2D.frame = 0
 			
@@ -679,7 +683,12 @@ func handle_sit():
 				target_angle = 45
 		else:
 			$CollisionShape2D.disabled=false
-			
+		
+func create_jump_vfx():
+	var j_vfx = ((preload("res://jump_vfx.tscn")).instantiate())
+	get_parent().add_child(j_vfx)
+	j_vfx.position = position + Vector2(0,30)		
+	
 func handle_dash():
 	if Input.is_action_just_pressed("dash") && stamina.value>0:
 		var f = 0
@@ -719,10 +728,10 @@ func _on_animated_sprite_2d_animation_finished():
 	pass # Replace with function body.
 
 func _on_animated_sprite_2d_animation_changed():
+	$AnimatedSprite2D/led.animation = $AnimatedSprite2D.animation
 	var an = $AnimatedSprite2D.animation
 	if(an=='wall_jump'):
 		play_sound(preload("res://Sounds/Jumppad.wav"))
-	if($AnimatedSprite2D.animation=='wall_jump'):
 		was_wall_jump = true
 	else:
 		if(was_wall_jump):
@@ -734,6 +743,7 @@ func _on_animated_sprite_2d_animation_changed():
 
 
 func _on_animated_sprite_2d_frame_changed():
+	$AnimatedSprite2D/led.frame = $AnimatedSprite2D.frame
 	var anim = $AnimatedSprite2D.animation
 	var frame = $AnimatedSprite2D.frame
 	
